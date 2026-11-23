@@ -1,14 +1,14 @@
 {
-  "name": "percentage-calculator",
+  "name": "json-to-xml-converter",
   "version": "1.4.0",
   "private": true,
-  "description": "A tap-tempo metronome utility that computes BPM from rhythmic taps and shows beat timing statistics.",
+  "description": "Convert JSON data to well-formed XML with attribute notation support, namespace prefixes, pretty printing and copy/download output.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ItsJust-tools/1795287972.git"
+    "url": "git+https://github.com/ItsJust-tools/json-to-xml-converter.git"
   },
-  "homepage": "https://github.com/ItsJust-tools/1795287972",
+  "homepage": "https://github.com/ItsJust-tools/json-to-xml-converter",
   "workspaces": [
     "packages/*"
   ],
@@ -30,7 +30,6 @@
   },
   "dependencies": {
     "@itsjust/core": "*",
-    "html-to-image": "^1.11.13",
     "lz-string": "^1.5.0",
     "next": "^16.2.9",
     "react": "^19.2.8",

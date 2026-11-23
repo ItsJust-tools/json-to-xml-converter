@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **JSON to XML Converter (v1.0.0)**: First release — live JSON to XML conversion while typing, `@`-prefixed attribute notation, default namespace and prefix mappings, pretty printing with configurable indent or minified output, XML declaration toggle with version/encoding, parse errors with line/column hints, clipboard copy, `.xml` download, keyboard shortcuts, and shareable URL state.
+
+### Added
+
 - **BPM Tap Tempo (v1.0.0)**: First release — tap-tempo BPM computation with sliding tap window, 2s idle reset, interval statistics with min/max confidence range, preset tempo grid (60/90/120/150/180), Web Audio click feedback, clipboard copy, keyboard shortcuts, shareable URL state, and .itsjust.json import/export.
 
 ### Added

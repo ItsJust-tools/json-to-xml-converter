@@ -1,35 +1,69 @@
-# BPM Tap Tempo
+# JSON to XML Converter
 
-Tap in rhythm with a song and get an instant BPM estimate. A practical tempo-tapping utility for musicians, DJs and producers.
+Convert JSON data to well-formed XML in your browser. Paste or type JSON and get instant XML output with attribute notation, namespaces, pretty printing and download — all client-side, privacy-first.
 
-**Live:** [bpm-tap-tempo.itsjust.tools](https://bpm-tap-tempo.itsjust.tools)
+**Live:** [json-to-xml-converter.itsjust.tools](https://json-to-xml-converter.itsjust.tools)
 
 ## Features
 
-- Tap with the big pad, the toolbar button, `Space` or `T` — average BPM updates live
-- Sliding window of recent taps (2–30s, default 10s); the sequence resets after 2 seconds of inactivity
-- Live beat interval in milliseconds alongside BPM
-- BPM confidence range (min/max interval among recent taps)
-- Preset BPM reference grid (60/90/120/150/180) highlighting the nearest preset
-- Audio click feedback via the Web Audio API (toggle with the sidebar switch or `K`)
-- Copy the computed BPM to the clipboard (`C`) with toast feedback
-- Shareable state via URL, `.itsjust.json` import/export and image/PDF export
+- Paste or upload JSON and get instant XML output with live conversion while typing
+- Attribute notation: keys prefixed with `@` become XML attributes of the parent element
+- Namespace support: configurable default namespace and prefix mapping
+- Pretty printing with configurable indent size, or minified output
+- XML declaration toggle with configurable version and encoding
+- JSON parse errors reported with a clear message and a line/column hint
+- Copy to clipboard and download as an `.xml` file
+- Shareable state: the current JSON and options serialize into the URL hash via the share dialog
 - 100% client-side — no data ever leaves your browser
+
+## Examples
+
+Input JSON:
+
+```json
+{
+  "name": "Ada Lovelace",
+  "age": 36,
+  "languages": ["math", "notes"],
+  "@id": "p1"
+}
+```
+
+Output XML:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+  <name>Ada Lovelace</name>
+  <age>36</age>
+  <languages>
+    <languages_item>math</languages_item>
+    <languages_item>notes</languages_item>
+  </languages>
+  <root>
+    <person id="p1">
+      <name>Ada Lovelace</name>
+      <age>36</age>
+      <languages>
+        <languages_item>math</languages_item>
+        <languages_item>notes</languages_item>
+      </languages>
+    </person>
+  </root>
+</root>
+```
 
 ## Keyboard shortcuts
 
-| Key           | Action             |
-| ------------- | ------------------ |
-| `Space` / `T` | Tap                |
-| `R`           | Reset tap sequence |
-| `C`           | Copy BPM           |
-| `K`           | Toggle audio click |
+| Key            | Action           |
+| -------------- | ---------------- |
+| `Ctrl+Shift+C` | Copy XML output  |
+| `Ctrl+Shift+X` | Clear JSON input |
 
 ## Development
 
 ```bash
 npm install
-npm run build -w @itsjust/core   # build shared core first
 npm run dev
 npm test
 ```
@@ -37,9 +71,13 @@ npm test
 ## Deployment
 
 ```bash
-docker build -t itsjust-bpm-tap-tempo .
-docker run -p 3000:3000 itsjust-bpm-tap-tempo
+docker build -t itsjust-json-to-xml-converter .
+docker run -p 3000:3000 itsjust-json-to-xml-converter
 ```
+
+## CI
+
+Every push to `main` runs lint, typecheck, audit, docs checks, unit tests with coverage and the Playwright smoke test.
 
 ## License
 

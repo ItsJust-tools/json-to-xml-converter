@@ -20,7 +20,6 @@ const mockSetData = vi.fn();
 const mockToast = vi.fn();
 const mockHandleExport = vi.fn();
 const mockImport = vi.fn();
-const mockToolbarActions = { canUndo: true, canRedo: true, onUndo: vi.fn(), onRedo: vi.fn() };
 
 vi.mock('@itsjust/core', () => ({
   ToolShell: ({ toolbar, sidebar, canvas, statusBar }: Record<string, unknown>) => (
@@ -39,18 +38,15 @@ vi.mock('@itsjust/core', () => ({
   useTool: () => ({
     state: {
       data: {
-        mode: 'of',
-        percentageOf: '20',
-        ofBase: '150',
-        changeFrom: '80',
-        changeTo: '100',
-        reversePart: '30',
-        reversePercent: '15',
-        addSubValue: '250',
-        addSubPercent: '20',
-        addSubOp: 'add',
-        compoundA: '20',
-        compoundB: '30',
+        jsonInput: '{"a":1}',
+        includeDeclaration: true,
+        declarationVersion: '1.0',
+        declarationEncoding: 'UTF-8',
+        attributeNotation: true,
+        indentSize: 2,
+        minify: false,
+        defaultNamespace: '',
+        prefixes: [],
         history: [],
       },
       setData: mockSetData,
@@ -62,50 +58,49 @@ vi.mock('@itsjust/core', () => ({
     handleExport: mockHandleExport,
     importFromFile: mockImport,
     isImporting: false,
-    toolbarActions: mockToolbarActions,
   }),
 }));
 
 vi.mock('@/tool', () => ({
   toolConfig: {
-    id: '1795287972',
-    name: 'Percentage Calculator',
+    id: 'json-to-xml-converter',
+    name: 'JSON to XML Converter',
     version: '1.0.0',
     features: { sidebar: true },
-    theme: { brand: 'Percentage Calculator' },
+    theme: { brand: 'JSON to XML Converter' },
   },
-  templateBaseVersion: '1.1.0',
-  Canvas: ({ state }: { state: Record<string, unknown> }) => <div>canvas:{String(state.mode)}</div>,
+  templateBaseVersion: '1.4.0',
+  Canvas: ({ state }: { state: Record<string, unknown> }) => (
+    <div>canvas:{String(state.jsonInput)}</div>
+  ),
   Toolbar: () => <div>toolbar</div>,
   Sidebar: () => <div>sidebar</div>,
   summaryText: () => 'summary',
 }));
 
 vi.mock('@/tool/tool-definition', () => ({
-  percentageCalculatorTool: {
+  jsonToXmlConverterTool: {
     serialize: (state: unknown) => JSON.stringify(state),
     deserialize: () => ({
       success: true,
       data: {
-        mode: 'of',
-        percentageOf: '20',
-        ofBase: '150',
-        changeFrom: '80',
-        changeTo: '100',
-        reversePart: '30',
-        reversePercent: '15',
-        addSubValue: '250',
-        addSubPercent: '20',
-        addSubOp: 'add',
-        compoundA: '20',
-        compoundB: '30',
+        jsonInput: '{"a":1}',
+        includeDeclaration: true,
+        declarationVersion: '1.0',
+        declarationEncoding: 'UTF-8',
+        attributeNotation: true,
+        indentSize: 2,
+        minify: false,
+        defaultNamespace: '',
+        prefixes: [],
         history: [],
       },
     }),
   },
+  convertWithState: () => ({ xml: '<root><a>1</a></root>', error: null }),
 }));
 
-describe('app client and help page', () => {
+describe('app client', () => {
   beforeEach(() => {
     mockSetData.mockReset();
     mockToast.mockReset();
@@ -117,7 +112,7 @@ describe('app client and help page', () => {
       writable: true,
       value: vi.fn().mockResolvedValue(undefined),
     });
-    window.history.replaceState(null, '', 'http://localhost:3000/?state=e30%3D');
+    window.history.replaceState(null, '', 'http://localhost:3000/');
   });
 
   it('renders dynamic tool client wrapper', () => {
@@ -131,6 +126,22 @@ describe('app client and help page', () => {
     expect(screen.getByText('toolbar')).toBeInTheDocument();
     fireEvent.click(screen.getByText('trigger-share'));
 
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(mockToast).toHaveBeenCalled();
+  });
+
+  it('loads shared state from the URL on mount', async () => {
+    const { compressToEncodedURIComponent } = await import('lz-string');
+    const encoded = compressToEncodedURIComponent(JSON.stringify({ jsonInput: '{"shared":true}' }));
+    window.history.replaceState(
+      null,
+      '',
+      `http://localhost:3000/?state=${encodeURIComponent(encoded)}`
+    );
+    const { rerender } = render(<ToolClient />);
+    rerender(<ToolClient />);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(mockSetData).toHaveBeenCalled();
+    expect(mockToast).toHaveBeenCalledWith('Loaded state from shared URL', 'success');
   });
 });

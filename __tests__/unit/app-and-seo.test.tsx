@@ -12,12 +12,12 @@ import { cn } from '@/lib/utils';
 import { generateJsonLd, generateToolMetadata } from '@/lib/seo';
 import toolConfig from '@/tool/tool.config';
 import { getPublicSiteUrl, templateMetadata } from '@/tool/template-metadata';
-import { percentageCalculatorTool } from '@/tool/tool-definition';
+import { jsonToXmlConverterTool } from '@/tool/tool-definition';
 import { Canvas } from '@/tool/components/Canvas';
 import { Sidebar } from '@/tool/components/Sidebar';
 import { Toolbar } from '@/tool/components/Toolbar';
 import { DEFAULT_STATE as BASE_DEFAULT_STATE } from '@/tool/types';
-import type { ExporterLoader } from '@itsjust/core';
+import type { ToolState } from '@/tool/types';
 
 vi.mock('next/link', () => ({
   default: ({ href, children, ...props }: { href: string; children: ReactNode }) => (
@@ -93,72 +93,53 @@ describe('app and seo', () => {
   it('covers tool definition and helper exports', async () => {
     expect(cn('a', undefined, 'b', false, null, 'c')).toBe('a b c');
     expect(getPublicSiteUrl()).toBe('http://localhost:3000');
-    expect(percentageCalculatorTool.name).toBe(toolConfig.name);
+    expect(jsonToXmlConverterTool.name).toBe(toolConfig.name);
     expect(
-      percentageCalculatorTool.deserialize({
-        mode: 'change',
-        changeFrom: '80',
-        changeTo: '100',
-        history: [{ text: 'X% of Y: 30', createdAt: '2026-11-21T10:00:00.000Z' }],
+      jsonToXmlConverterTool.deserialize({
+        jsonInput: '{"a":1}',
+        minify: true,
+        history: [{ text: '1 line of XML', createdAt: '2026-11-23T10:00:00.000Z' }],
       })
     ).toEqual({
       success: true,
       data: {
-        mode: 'change',
-        percentageOf: BASE_DEFAULT_STATE.percentageOf,
-        ofBase: BASE_DEFAULT_STATE.ofBase,
-        changeFrom: '80',
-        changeTo: '100',
-        reversePart: BASE_DEFAULT_STATE.reversePart,
-        reversePercent: BASE_DEFAULT_STATE.reversePercent,
-        addSubValue: BASE_DEFAULT_STATE.addSubValue,
-        addSubPercent: BASE_DEFAULT_STATE.addSubPercent,
-        addSubOp: BASE_DEFAULT_STATE.addSubOp,
-        compoundA: BASE_DEFAULT_STATE.compoundA,
-        compoundB: BASE_DEFAULT_STATE.compoundB,
-        history: [{ text: 'X% of Y: 30', createdAt: '2026-11-21T10:00:00.000Z' }],
+        jsonInput: '{"a":1}',
+        includeDeclaration: BASE_DEFAULT_STATE.includeDeclaration,
+        declarationVersion: BASE_DEFAULT_STATE.declarationVersion,
+        declarationEncoding: BASE_DEFAULT_STATE.declarationEncoding,
+        attributeNotation: BASE_DEFAULT_STATE.attributeNotation,
+        indentSize: BASE_DEFAULT_STATE.indentSize,
+        minify: true,
+        defaultNamespace: BASE_DEFAULT_STATE.defaultNamespace,
+        prefixes: BASE_DEFAULT_STATE.prefixes,
+        history: [{ text: '1 line of XML', createdAt: '2026-11-23T10:00:00.000Z' }],
       },
     });
-    const repaired = percentageCalculatorTool.deserialize({ nope: true });
+    const repaired = jsonToXmlConverterTool.deserialize({ nope: true });
     expect(repaired.success).toBe(true);
     if (repaired.success) {
-      expect(repaired.data.mode).toBe(BASE_DEFAULT_STATE.mode);
+      expect(repaired.data.jsonInput).toBe(BASE_DEFAULT_STATE.jsonInput);
       expect(repaired.data.history).toEqual([]);
     }
-    expect(
-      percentageCalculatorTool.serialize({ ...BASE_DEFAULT_STATE, changeFrom: '80' })
-    ).toContain('"changeFrom":"80"');
-    const exporters =
-      (percentageCalculatorTool as { exporters?: Array<{ loader: ExporterLoader }> }).exporters ??
-      [];
-    expect(exporters).toHaveLength(4);
-    const first = exporters[0];
-    expect(first).toBeDefined();
-    if (!first) throw new Error('missing exporter');
-    const png = await (first.loader as ExporterLoader)();
-    const resolved = 'default' in png ? png.default : png.exporter;
-    expect(resolved.format).toBe('png');
+    expect(jsonToXmlConverterTool.serialize({ ...BASE_DEFAULT_STATE, minify: true })).toContain(
+      '"minify":true'
+    );
+    expect(jsonToXmlConverterTool.exporters ?? []).toHaveLength(0);
   });
 
   it('renders tool components', () => {
+    const sample: ToolState = { ...BASE_DEFAULT_STATE, jsonInput: '{"a":1, "b": "x&y"}' };
     render(
       <>
-        <Toolbar
-          state={{ ...BASE_DEFAULT_STATE }}
-          onChange={() => {}}
-          onClear={() => {}}
-          onCopy={() => {}}
-        />
+        <Toolbar state={{ ...BASE_DEFAULT_STATE }} onChange={() => {}} onClear={() => {}} />
         <Sidebar state={{ ...BASE_DEFAULT_STATE }} onChange={() => {}} />
-        <Canvas
-          state={{ ...BASE_DEFAULT_STATE, mode: 'of', percentageOf: '20', ofBase: '150' }}
-          onChange={() => {}}
-        />
+        <Canvas state={sample} onChange={() => {}} />
       </>
     );
 
-    expect(screen.getByTestId('mode-tab-of')).toBeInTheDocument();
-    expect(screen.getByTestId('result-card')).toBeInTheDocument();
-    expect(screen.getByTestId('result-main')).toHaveTextContent('30');
+    expect(screen.getByTestId('opt-minify')).toBeInTheDocument();
+    expect(screen.getByTestId('add-prefix')).toBeInTheDocument();
+    expect(screen.getByTestId('xml-output')).toHaveTextContent(/<a>1<\/a>/);
+    expect(screen.getByTestId('xml-output')).toHaveTextContent('x&amp;y');
   });
 });

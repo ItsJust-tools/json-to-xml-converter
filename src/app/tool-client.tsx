@@ -11,7 +11,7 @@ import {
 import { ToolShell, useTool, ImportExport } from '@itsjust/core';
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
 import { toolConfig, templateBaseVersion, Canvas, Toolbar, Sidebar, summaryText } from '@/tool';
-import { percentageCalculatorTool } from '@/tool/tool-definition';
+import { jsonToXmlConverterTool, convertWithState } from '@/tool/tool-definition';
 import type { ToolState } from '@/tool/types';
 
 export default function ToolClient() {
@@ -23,7 +23,7 @@ export default function ToolClient() {
     StatusBar?: ComponentType<{ children?: ReactNode }>;
   };
   const canvasRef = useRef<HTMLDivElement>(null);
-  const tool = useTool<ToolState>(percentageCalculatorTool, canvasRef);
+  const tool = useTool<ToolState>(jsonToXmlConverterTool, canvasRef);
   const setToolData = tool.state.setData;
   const showToast = tool.toast;
   const [isSharing, setIsSharing] = useState(false);
@@ -35,13 +35,6 @@ export default function ToolClient() {
   const title = toolConfig.name;
   const state = tool.state.data;
 
-  const handleStateChange = useCallback(
-    (updater: (prev: ToolState) => ToolState) => {
-      setToolData(updater);
-    },
-    [setToolData]
-  );
-
   useEffect(() => {
     if (hasLoadedSharedState.current) return;
     hasLoadedSharedState.current = true;
@@ -52,7 +45,7 @@ export default function ToolClient() {
       const serialized = decompressFromEncodedURIComponent(encodedState);
       if (!serialized) throw new Error('Invalid shared URL');
       const parsed: unknown = JSON.parse(serialized);
-      const deserialized = percentageCalculatorTool.deserialize(parsed);
+      const deserialized = jsonToXmlConverterTool.deserialize(parsed);
       if (!deserialized.success) throw new Error(deserialized.error);
       setToolData(deserialized.data);
       showToast('Loaded state from shared URL', 'success');
@@ -62,20 +55,48 @@ export default function ToolClient() {
     }
   }, [setToolData, showToast]);
 
-  const handleCopyResult = useCallback(async () => {
+  const handleCopyOutput = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(`${title}\n${summaryText(state)}`);
-      showToast('Result copied to clipboard', 'success');
+      const xml = convertWithState(state).xml ?? '';
+      if (!xml) {
+        showToast('Nothing to copy — fix the JSON input first', 'error');
+        return;
+      }
+      await navigator.clipboard.writeText(xml);
+      showToast('XML output copied to clipboard', 'success');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to copy result';
+      const message = error instanceof Error ? error.message : 'Failed to copy output';
       showToast(message, 'error');
     }
-  }, [showToast, state, title]);
+  }, [showToast, state]);
+
+  const handleDownload = useCallback(() => {
+    try {
+      const xml = convertWithState(state).xml;
+      if (!xml) {
+        showToast('Nothing to download — fix the JSON input first', 'error');
+        return;
+      }
+      const blob = new Blob([xml], { type: 'application/xml' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = 'output.xml';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      showToast('Downloaded output.xml', 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to download output';
+      showToast(message, 'error');
+    }
+  }, [showToast, state]);
 
   const handleShare = useCallback(async () => {
     setIsSharing(true);
     try {
-      const serialized = percentageCalculatorTool.serialize(state);
+      const serialized = jsonToXmlConverterTool.serialize(state);
       const encodedState = compressToEncodedURIComponent(serialized);
       if (!encodedState) throw new Error('Failed to encode state for URL');
       const url = new URL(window.location.href);
@@ -103,13 +124,17 @@ export default function ToolClient() {
     }
   }, [showToast, state, title]);
 
+  const handleClear = useCallback(() => {
+    setToolData((prev) => ({ ...prev, jsonInput: '' }));
+  }, [setToolData]);
+
   const toolbarContent = (
     <>
       <Toolbar
         state={state}
         onChange={(next) => setToolData(() => next)}
-        onClear={() => setToolData((prev) => ({ ...prev, history: [] }))}
-        onCopy={() => void handleCopyResult()}
+        onClear={handleClear}
+        onCopy={() => void handleCopyOutput()}
       />
       <ImportExport
         formats={tool.supportedFormats}
@@ -129,12 +154,7 @@ export default function ToolClient() {
       <Canvas
         state={state}
         onChange={(next) => setToolData(() => next)}
-        onSaveHistory={(text) =>
-          setToolData((prev) => ({
-            ...prev,
-            history: [{ text, createdAt: new Date().toISOString() }, ...prev.history].slice(0, 20),
-          }))
-        }
+        onDownload={handleDownload}
       />
     </div>
   );
@@ -155,7 +175,7 @@ export default function ToolClient() {
           'Ready'
         )}
       </span>
-      <span className="status-slot status-slot-mode">{state.mode}</span>
+      <span className="status-slot status-slot-mode">{state.minify ? 'minified' : 'pretty'}</span>
       <span className="status-slot status-slot-summary">{summaryText(state)}</span>
       <span className="status-slot status-slot-history">{state.history.length} saved</span>
       <span className="status-slot status-slot-tool-version">Tool v{toolConfig.version}</span>
